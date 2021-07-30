@@ -1,0 +1,62 @@
+#include"apue.h"
+#include<errno.h>
+#include<limits.h>
+
+#ifdef PATH_MAX
+static long pathmax = PATH_MAX;
+#else
+static long pathmax =0;
+#endif
+
+static long posix_ver = 0;
+static long xsi_ver = 0;
+
+#define PATH_MAX_GUESS 1024
+
+char *path_alloc(size_t *sizep){
+	char *ptr;
+	size_t size;
+
+	if(posix_ver==0){
+		posix_ver = sysconf(_SC_VERSION);
+	}
+
+	if(xsi_ver==0){
+		xsi_ver=sysconf(_SC_XOPEN_VERSION);
+	}
+
+	if(pathmax==0){
+		errno=0;
+		if((pathmax=pathconf("/",_PC_PATH_MAX))<0){
+			if(errno==0)
+				pathmax = PATH_MAX_GUESS;
+			else
+				err_sys("pathconf err for _PC_PATH_MAX");
+		}else
+			pathmax++;
+	}
+
+	if((posix_ver<200112L)&&(xsi_ver<4))
+		size=pathmax+1;
+	else
+		size=pathmax;
+
+	if((ptr=malloc(size))==NULL)
+		err_sys("malloc error for pathname");
+
+	if(sizep!=NULL)
+		*sizep=size;
+
+	return ptr;
+}
+
+int main(int argc,char **argv){
+	int sizep;
+
+	path_alloc(&sizep);
+
+	printf("%d\n",sizep);
+
+	return 0;
+}
+
